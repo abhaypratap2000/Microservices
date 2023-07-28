@@ -1,11 +1,14 @@
 const bcrypt = require('bcrypt');
 const userModel = require('../database/user');
+const imageModel = require('../database/imageScheema')
 const { authSchema } = require('../helpers/userAuth');
 const jwt = require('jsonwebtoken');
 const otp = require('../helpers/otpservice');
 const nodemailer = require('nodemailer');
 const fs = require('fs');
 const { email } = require('../template/email.template');
+const { Console } = require('console');
+const upload = require('../middleware/multer');
 
 require('dotenv').config();
 
@@ -54,9 +57,7 @@ exports.adduser = async (req, res) => {
        subject: 'Thanks For Registering With Us.',
        html: custommail,
      });
-     console.log(req.body.name);
-
-    await data.save();
+       await data.save();
     res.status(200).json({ message: 'success', data: data });
   } catch (error) {
     console.log(error);
@@ -73,7 +74,12 @@ exports.login = async (req, res) => {
       { expiresIn: '300s' },
       (err, token) => {
         if (checkuser) {
-          return res.json({ name: data.name, email: data.email, token: token });
+          return res.json({
+            name: data.name,
+            email: data.email,
+            Accesstoken: token,
+            refreshToken:req.refreshToken
+          });
         } else {
           console.log('user not found');
         }
@@ -88,3 +94,28 @@ exports.profile = async (req, res) => {
     message: 'profile accress',
   });
 };
+
+
+
+exports.uploads = async (req , res)=>{
+  upload(req,res,(err)=>{
+    if(err){
+      console.log(err)
+    }
+    else{
+      console.log(req.body , req.file);
+
+      const newImage = new imageModel({
+         name:req.body.name,
+         image:{
+          data : req.file.filename,
+          contentType:'image/png'
+         }
+      });
+      newImage.save().then(()=> res.send("successfully uploaded"))
+      .catch(err=>Console.log(err));
+    };
+
+  });
+  
+}
